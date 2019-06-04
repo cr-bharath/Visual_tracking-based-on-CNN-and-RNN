@@ -1,0 +1,3 @@
+CROP_SIZE = 227
+BBOX_SCALE = 2
+DEBUG = False
