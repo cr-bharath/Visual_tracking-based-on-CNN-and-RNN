@@ -6,7 +6,7 @@ import numpy as np
 import re
 import im_util
 from torch.utils.data.dataset import Dataset
-import im_util
+from constants import CROP_SIZE
 
 DEBUG = True
 Unrolling_factor = 4
@@ -80,37 +80,35 @@ class TrackerDataset(Dataset):
         folder_name = self.folder[folder_index]
         for dd in range(Unrolling_factor):
             image_name = "{:06d}".format(file_index + max(dd-1, 0))
-            img_path = self.train_data_path + folder_name + "/" + image_name + ".JPEG"
-            img = cv2.imread(img_path)
             bbox = self.get_label(folder_name, image_name)
             bbox = np.array(bbox)
-            patch, crop_box = im_util.image_crop(img, bbox)
-            label = im_util.find_crop_label(bbox, crop_box)
+            patch, label = self.get_patch_and_label(folder_name, image_name, bbox)
 
-            # TODO: Crop size is hardcoded
             if DEBUG:
-                drawBox = np.round(label * 227).astype(int)
-                img = cv2.rectangle(patch, (drawBox[0], drawBox[1]), (drawBox[2], drawBox[3]), (0, 255, 0), 3)
+                drawBox = np.round(label * CROP_SIZE).astype(int)
+                img = cv2.rectangle(patch, (drawBox[0], drawBox[1]), (drawBox[2], drawBox[3]), (0, 255, 0), 2)
                 cv2.imshow('Patch0 with label', img)
                 cv2.waitKey(5000)
                 cv2.destroyAllWindows()
-            image_name = "{:06d}".format(file_index + dd)
-            img_path = self.train_data_path + folder_name + "/" + image_name + ".JPEG"
-            img = cv2.imread(img_path)
-            bbox = self.get_label(folder_name, image_name)
-            bbox = np.array(bbox)
-            patch, crop_box = im_util.image_crop(img, bbox)
-            label = im_util.find_crop_label(bbox, crop_box)
 
-            # TODO: Crop size is hardcoded
+            # For t+1 image sending the same bbox
+            image_name = "{:06d}".format(file_index + dd)
+            patch, label = self.get_patch_and_label(folder_name, image_name, bbox)
             if DEBUG:
-                drawBox = np.round(label * 227).astype(int)
-                img = cv2.rectangle(patch, (drawBox[0], drawBox[1]), (drawBox[2], drawBox[3]), (0, 255, 0), 3)
+                drawBox = np.round(label * CROP_SIZE).astype(int)
+                img = cv2.rectangle(patch, (drawBox[0], drawBox[1]), (drawBox[2], drawBox[3]), (0, 255, 0), 2)
                 cv2.imshow('Patch1 with label', img)
                 cv2.waitKey(5000)
                 cv2.destroyAllWindows()
 
         return x, y
+
+    def get_patch_and_label(self, folder_name, image_name, bbox):
+        img_path = self.train_data_path + folder_name + "/" + image_name + ".JPEG"
+        img = cv2.imread(img_path)
+        patch, crop_box = im_util.image_crop(img, bbox)
+        label = im_util.find_crop_label(bbox, crop_box)
+        return patch, label
 
     def get_label(self, folder_name, file_name):
         # base_path = os.getcwd()

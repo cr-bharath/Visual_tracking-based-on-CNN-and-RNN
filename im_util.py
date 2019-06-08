@@ -5,6 +5,7 @@ from constants import CROP_SIZE
 from constants import BBOX_SCALE
 from constants import DEBUG
 
+
 def scale_bbox(bbox):
     bbox = bbox.astype(float)
     x_mid = (bbox[0] + bbox[2])/2.0
