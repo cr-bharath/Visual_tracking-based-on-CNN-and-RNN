@@ -35,7 +35,7 @@ def image_crop(image, bbox):
     bbox_clip = np.clip(bbox, 0, img_shape[[1, 0, 1, 0]])
     crop_image = image[bbox_clip[1]: bbox_clip[3], bbox_clip[0]:bbox_clip[2], :]
     # TODO: Remove not
-    if not DEBUG:
+    if DEBUG:
         cv2.imshow('Original Image', image)
         cv2.waitKey(5000)
         cv2.imshow('CroppedImage', crop_image)

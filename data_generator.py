@@ -8,7 +8,7 @@ import im_util
 from torch.utils.data.dataset import Dataset
 from constants import CROP_SIZE
 
-DEBUG = True
+DEBUG = False
 Unrolling_factor = 4
 
 
@@ -37,7 +37,7 @@ class TrackerDataset(Dataset):
         x = np.empty((Unrolling_factor, 2, self.dim[2], self.dim[0], self.dim[1]))# Since x is a tensor and #channels
                                                                                # appear first
         temp = x.shape
-        y = np.empty((1, 4))
+        y = np.empty((Unrolling_factor, 1, 4))
 
         for i in range(len(self.folder_start_pos)):
             if item < (self.folder_start_pos[i]):
@@ -83,6 +83,10 @@ class TrackerDataset(Dataset):
             bbox = self.get_label(folder_name, image_name)
             bbox = np.array(bbox)
             patch, label = self.get_patch_and_label(folder_name, image_name, bbox)
+            pil_img = np.asarray(patch).transpose(-1, 0, 1)
+
+            x[dd, 0, ...] = np.asarray(patch).transpose(-1, 0, 1)
+            y[dd, ...] = label
 
             if DEBUG:
                 drawBox = np.round(label * CROP_SIZE).astype(int)
@@ -94,6 +98,8 @@ class TrackerDataset(Dataset):
             # For t+1 image sending the same bbox
             image_name = "{:06d}".format(file_index + dd)
             patch, label = self.get_patch_and_label(folder_name, image_name, bbox)
+            x[dd, 1, ...] = np.asarray(patch).transpose(-1, 0, 1)
+            y[dd, ...] = label
             if DEBUG:
                 drawBox = np.round(label * CROP_SIZE).astype(int)
                 img = cv2.rectangle(patch, (drawBox[0], drawBox[1]), (drawBox[2], drawBox[3]), (0, 255, 0), 2)

@@ -3,6 +3,7 @@ import numpy as np
 
 from data_generator import TrackerDataset
 from torch.utils.data import DataLoader
+from constants import CROP_SIZE
 
 Unrolling_factor = 2
 DEBUG = False
@@ -37,11 +38,13 @@ def main():
     train_data_path = data_path + '/data/train/Data/'
     train_annot_path = data_path + '/data/train/Annotations/'
     list_id, folder_start_pos = prepare_for_dataset(train_data_path)
-    train_dataset = TrackerDataset(train_data_path, train_annot_path, list_id, folder_start_pos, (256, 256, 3))
+    train_dataset = TrackerDataset(train_data_path, train_annot_path, list_id, folder_start_pos, (CROP_SIZE, CROP_SIZE, 3))
     # img,labels = train_dataset.__getitem__(1)
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+
     count = 0
     for images, labels in train_loader:
+        images = images.view(-1, 3, CROP_SIZE, CROP_SIZE)
         print(images.shape)
         print(labels.shape)
         break
