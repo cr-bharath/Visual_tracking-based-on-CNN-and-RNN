@@ -83,7 +83,7 @@ def find_crop_label(bbox, crop_location):
     output_box[0] /= crop_width
     output_box[1] /= crop_height
     output_box[2] /= crop_width
-    output_box[3] /= crop_width
+    output_box[3] /= crop_height
     return output_box
 
 
