@@ -5,48 +5,75 @@ import torch
 import torchvision.models as models
 
 
-class ConvNet(nn.Module):
-    def __init__(self,batch_size,unroll):
-        super(ConvNet,self).__init__()
-        self.batch_size = batch_size
-        self.unroll = unroll
-        alexnet = models.alexnet(pretrained=True)
-        # Delete last FC layers
-        modules = list(alexnet.children())[0]
-        modules = list(modules.children())[:-1]
-        # Extracting skip layers
-        self.conv1 = nn.Sequential(*modules[:2])
-        self.conv2 = nn.Sequential(*modules[2:5])
-        self.conv3 = nn.Sequential(*modules[5:])
-    def forward(self,images):
-        # Extract image features using Conv net
-        with torch.no_grad():
-            features1 = self.conv1(images)
-            features2 = self.conv2(features1)
-            features3 = self.conv3(features2)
-        # Flatten all skip layers
-        features1 = features1.reshape(features1.size(0),-1)
-        features2 = features2.reshape(features2.size(0),-1)
-        features3 = features3.reshape(features3.size(0),-1)
-        features = torch.cat((features1,features2,features3),1)
-        features = features.reshape(features.size(0)/2,-1)
-        return features
+    class ConvNet(nn.Module):
+        def __init__(self,batch_size,unroll):
+            super(ConvNet,self).__init__()
+            self.batch_size = batch_size
+            self.unroll = unroll
+            alexnet = models.alexnet(pretrained=True)
+
+            # Delete last FC layers
+            modules = list(alexnet.children())[0]
+
+            # Splitting model at skip connection points
+            self.conv1 = nn.Sequential(*modules[:3])
+            self.conv2 = nn.Sequential(*modules[3:6])
+            self.conv3 = nn.Sequential(*modules[6:-1])
+            self.last_maxpool = modules[-1]
+
+            # Prelu activations for skip connections
+            self.prelu1 = nn.PReLU(16)
+            self.prelu2 = nn.PReLU(32)
+            self.prelu3 = nn.PReLU(64)
+
+            # Convolution layers for skip connections
+            self.skip_conv1 = nn.Conv2d(64,16,1)
+            self.skip_conv2 = nn.Conv2d(192,32,1)
+            self.skip_conv3 = nn.Conv2d(256,64,1)
+
+        def forward(self,images):
+            # Extract image features using Conv net
+            with torch.no_grad():
+                conv1_output = self.conv1(images)
+                conv2_output = self.conv2(conv1_output)
+                conv3_output = self.conv3(conv2_output)
+                alexnet_features = self.last_maxpool(conv3_output)
+            # Convolution for skip connections with prelu activations
+            skip_conv1_output = self.prelu1(self.skip_conv1(conv1_output))
+            skip_conv2_output = self.prelu2(self.skip_conv2(conv2_output))
+            skip_conv3_output = self.prelu3(self.skip_conv3(conv3_output))
+
+            # Flatten skip connections
+            skip_conv1_output = skip_conv1_output.reshape(skip_conv1_output.size(0),-1)
+            skip_conv2_output = skip_conv2_output.reshape(skip_conv2_output.size(0),-1)
+            skip_conv3_output = skip_conv3_output.reshape(skip_conv3_output.size(0),-1)
+            alexnet_features = alexnet_features.reshape(alexnet_features.size(0),-1)
+
+            # Concatentate all skip connections
+            convnet_output = torch.cat((skip_conv1_output,skip_conv2_output,skip_conv3_output,alexnet_features),1)
+
+            # (batch_size x num_unroll x 2) x feature_size --> (batch_size x num_unroll) x (2 x feature_size)
+            convnet_output = convnet_output.reshape(int(convnet_output.size(0)/2),-1)
+            return convnet_output
 
 
-class RNN(nn.Module):
-    def __init__(self,feature_size,num_unroll):
-        super(RNN,self).__init__()
-        self.unroll = num_unroll
-        self.fc1 = nn.Linear(feature_size,1024)
-        self.lstm1 = nn.LSTM(1024,512,1,batch_first=True)
-        self.lstm2 = nn.LSTM(1536,512,1,batch_first=True)
-        self.fc_last = nn.Linear(512*self.unroll,4)
-    def forward(self,features):
-        fc1_output = self.fc1(features)
-        fc1_output_reshape = fc1_output.reshape(fc1_output.size(0)/self.unroll,self.unroll,-1)
-        lstm1_output,state = self.lstm1(fc1_output_reshape)
-        lstm2_input = torch.cat((fc1_output,lstm1_output),2)
-        lstm2_output,state = self.lstm2(lstm2_input)
-        fc_last_input = lstm2_output.reshape(lstm2_output.size(0),-1)
-        fc_output = self.fc2(fc_last_input)
-        return fc_output
+    class RNN(nn.Module):
+        def __init__(self,feature_size,num_unroll):
+            super(RNN,self).__init__()
+            self.unroll = num_unroll
+            self.fc1 = nn.Linear(feature_size,1024)
+            self.lstm1 = nn.LSTM(1024,512,1,batch_first=True)
+            self.lstm2 = nn.LSTM(1536,512,1,batch_first=True)
+            self.fc_last = nn.Linear(512*self.unroll,4)
+
+        def forward(self,features):
+            fc1_output = self.fc1(features)
+            fc1_output_reshape = fc1_output.reshape(int(fc1_output.size(0)/self.unroll),self.unroll,-1)
+            lstm1_output,state = self.lstm1(fc1_output_reshape)
+            # Concatenate lstm1 output and fc layer output
+            lstm2_input = torch.cat((fc1_output_reshape,lstm1_output),2)
+            lstm2_output,state = self.lstm2(lstm2_input)
+            # Flatten LSTM output
+            fc_last_input = lstm2_output.reshape(lstm2_output.size(0),-1)
+            fc_output = self.fc_last(fc_last_input)
+            return fc_output
