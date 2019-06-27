@@ -6,19 +6,20 @@ import numpy as np
 import re
 import im_util
 from torch.utils.data.dataset import Dataset
+from matplotlib import pyplot as plt
+
 from constants import CROP_SIZE
-
-DEBUG = False
-Unrolling_factor = 4
-
+from constants import CROP_PAD
 
 class TrackerDataset(Dataset):
-    def __init__(self, train_data_path, train_annot_path, list_id, folder_start_pos, dim):
+    def __init__(self, train_data_path, train_annot_path, list_id, folder_start_pos, dim, unrolls, debug):
         self.train_data_path = train_data_path
         self.train_annot_path = train_annot_path
         self.list_id = list_id
         self.folder_start_pos = folder_start_pos
         self.dim = dim
+        self.unrolling_factor = unrolls
+        self.debug = debug
         self.folder = [dI for dI in os.listdir(self.train_data_path) if
                        os.path.isdir(os.path.join(self.train_data_path, dI))]
         self.transforms = transforms.ToTensor()
@@ -34,15 +35,17 @@ class TrackerDataset(Dataset):
         # Find folder index and file index of the given ID
         folder_index = 0
         file_index = 0
-        x = np.empty((Unrolling_factor, 2, self.dim[2], self.dim[0], self.dim[1]))# Since x is a tensor and #channels
-                                                                               # appear first
-        temp = x.shape
-        y = np.empty((Unrolling_factor, 1, 4))
+        # x = np.empty((unrolling_factor, 2, self.dim[2], self.dim[0], self.dim[1]))# Since x is a tensor and #channels
+        #                                                                        # appear first
+        # temp = x.shape
+        # y = np.empty((Unrolling_factor, 1, 4))
+        tImage = np.zeros((self.unrolling_factor, 2, 3, CROP_SIZE, CROP_SIZE), dtype=np.uint8)
+        xywhLabels = np.zeros((self.unrolling_factor, 4), dtype=np.uint8)
 
         for i in range(len(self.folder_start_pos)):
             if item < (self.folder_start_pos[i]):
                 folder_index = i
-                if DEBUG:
+                if self.debug:
                     print("Given list id is %d" % item)
                     print("Corresponding folder index %d" % folder_index)
                 break
@@ -50,64 +53,70 @@ class TrackerDataset(Dataset):
             file_index = item
         else:
             file_index = item - self.folder_start_pos[folder_index - 1]
-        # Finding X
-        # #TODO: Crop properly for X and apply appropritae Y
-        # for train_len in range(Unrolling_factor):
-        #     # After finding in which folder the file lives, do imread of that file
-        #     folder_name = self.folder[folder_index]
-        #     file_name = "{:06d}".format(file_index + train_len)
-        #     img_path = self.train_data_path + folder_name + "/" + file_name + ".JPEG"
-        #     img = cv2.imread(img_path)
-        #     ws = img.shape[1] / self.dim[1]
-        #     hs = img.shape[0] / self.dim[0]
-        #     w = int(img.shape[1] / ws)
-        #     h = int(img.shape[0] / hs)
-        #     dim = (w, h)
-        #     img = cv2.resize(img, dim)
-        #     img = img / 255.0
-        #     temp = img.shape
-        #     img = self.transforms(img)
-        #     temp = img.shape
-        #     x[train_len, :, :, :] = img
-        # # Taking the label of last image
-        # bbox = self.get_label(folder_name, file_name)
-        # bbox[0] /= hs
-        # bbox[2] /= hs
-        # bbox[1] /= ws
-        # bbox[3] /= ws
-        # y = np.int32(bbox)
-
+        # Beginning of one sequence . Sequence length = Unrolling factor
         folder_name = self.folder[folder_index]
-        for dd in range(Unrolling_factor):
-            image_name = "{:06d}".format(file_index + max(dd-1, 0))
-            bbox = self.get_label(folder_name, image_name)
-            bbox = np.array(bbox)
-            patch, label = self.get_patch_and_label(folder_name, image_name, bbox)
-            pil_img = np.asarray(patch).transpose(-1, 0, 1)
+        images, labels = self.getData(folder_name, file_index)
+        height = images[1].shape[0]
+        initbox = labels[0]
+        bboxPrev = initbox
 
-            x[dd, 0, ...] = np.asarray(patch).transpose(-1, 0, 1)
-            y[dd, ...] = label
+        for dd in range(self.unrolling_factor):
+            bboxOn = labels[dd]
+            if dd==0:
+                noisyBox = bboxOn.copy()
+            else:
+                noisyBox = im_util.fix_bbox_intersection(bboxPrev, bboxOn, images[0].shape[1], images[0].shape[0])
 
-            if DEBUG:
-                drawBox = np.round(label * CROP_SIZE).astype(int)
-                img = cv2.rectangle(patch, (drawBox[0], drawBox[1]), (drawBox[2], drawBox[3]), (0, 255, 0), 2)
-                cv2.imshow('Patch0 with label', img)
+            image_0, output_box0 = im_util.get_cropped_input(
+                images[max(dd - 1, 0)], bboxPrev, CROP_PAD, CROP_SIZE)
+            tImage[dd, 0, ...] = np.moveaxis(image_0, -1, 0)
+
+            image_1, output_box1 = im_util.get_cropped_input(
+                images[dd], noisyBox, CROP_PAD, CROP_SIZE)
+            tImage[dd, 1, ...] = np.moveaxis(image_1, -1, 0)
+
+            if self.debug:
+                plt.subplot(121)
+                plt.imshow(image_0, cmap=plt.get_cmap('gray'))
+                plt.subplot(122)
+                plt.imshow(image_1, cmap=plt.get_cmap('gray'))
+                plt.show()
+            # bboxPrev = bboxOn
+
+
+            # Finding Labels
+            shiftedBBox = im_util.to_crop_coordinate_system(bboxOn, noisyBox, CROP_PAD, 1)
+            if self.debug:
+                bbox_t = im_util.to_crop_coordinate_system(bboxPrev, noisyBox, CROP_PAD, 1)
+                bbox_t = np.round(bbox_t*CROP_SIZE).astype(int)
+                img = cv2.rectangle(image_0, (bbox_t[0], bbox_t[1]), (bbox_t[2], bbox_t[3]), (0, 255, 0), 2)
+                bbox_t_1 = np.round(shiftedBBox.copy()*CROP_SIZE).astype(int)
+                img = cv2.rectangle(img, (bbox_t_1[0], bbox_t_1[1]), (bbox_t_1[2], bbox_t_1[3]), (0, 0, 255), 2)
+                cv2.imshow('Image at t', img)
                 cv2.waitKey(5000)
                 cv2.destroyAllWindows()
+            shiftedBBoxXYWH = im_util.xyxy_to_xywh(shiftedBBox)
+            xywhLabels[dd, :] = shiftedBBoxXYWH
+            bboxPrev = bboxOn
+        tImage = tImage.reshape([self.unrolling_factor* 2] + list(tImage.shape[2:]))
+        xyxyLabels = im_util.xywh_to_xyxy(xywhLabels.T).T * 10
+        xyxyLabels = xyxyLabels.astype(np.float32)
 
-            # For t+1 image sending the same bbox
+        return tImage, xyxyLabels
+
+    def getData(self, folder_name, file_index):
+        images = [None]*self.unrolling_factor
+        labels = [None]*self.unrolling_factor
+        for dd in range(self.unrolling_factor):
             image_name = "{:06d}".format(file_index + dd)
-            patch, label = self.get_patch_and_label(folder_name, image_name, bbox)
-            x[dd, 1, ...] = np.asarray(patch).transpose(-1, 0, 1)
-            y[dd, ...] = label
-            if DEBUG:
-                drawBox = np.round(label * CROP_SIZE).astype(int)
-                img = cv2.rectangle(patch, (drawBox[0], drawBox[1]), (drawBox[2], drawBox[3]), (0, 255, 0), 2)
-                cv2.imshow('Patch1 with label', img)
-                cv2.waitKey(5000)
-                cv2.destroyAllWindows()
+            img_path = self.train_data_path + folder_name + "/" + image_name + ".JPEG"
+            img = cv2.imread(img_path)
+            images[dd] = img
+            label = self.get_label(folder_name, image_name)
+            labels[dd] = label
+        return images, labels
 
-        return x, y
+
 
     def get_patch_and_label(self, folder_name, image_name, bbox):
         img_path = self.train_data_path + folder_name + "/" + image_name + ".JPEG"
