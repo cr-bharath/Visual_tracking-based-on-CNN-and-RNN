@@ -10,6 +10,8 @@ from matplotlib import pyplot as plt
 
 from constants import CROP_SIZE
 from constants import CROP_PAD
+from constants import IMAGENET_MEAN_BGR
+from constants import IMAGENET_STD_DEV_BGR
 
 class TrackerDataset(Dataset):
     def __init__(self, train_data_path, train_annot_path, list_id, folder_start_pos, dim, unrolls, debug):
@@ -69,11 +71,12 @@ class TrackerDataset(Dataset):
 
             image_0, output_box0 = im_util.get_cropped_input(
                 images[max(dd - 1, 0)], bboxPrev, CROP_PAD, CROP_SIZE)
-            tImage[dd, 0, ...] = np.moveaxis(image_0, -1, 0)
+
+            tImage[dd, 0, ...] = self.data_preparation(image_0)
 
             image_1, output_box1 = im_util.get_cropped_input(
                 images[dd], noisyBox, CROP_PAD, CROP_SIZE)
-            tImage[dd, 1, ...] = np.moveaxis(image_1, -1, 0)
+            tImage[dd, 1, ...] = self.data_preparation(image_1)
 
             if self.debug:
                 plt.subplot(121)
@@ -98,11 +101,28 @@ class TrackerDataset(Dataset):
             shiftedBBoxXYWH = im_util.xyxy_to_xywh(shiftedBBox)
             xywhLabels[dd, :] = shiftedBBoxXYWH
             bboxPrev = bboxOn
+
         tImage = tImage.reshape([self.unrolling_factor* 2] + list(tImage.shape[2:]))
         xyxyLabels = im_util.xywh_to_xyxy(xywhLabels.T).T * 10
         xyxyLabels = xyxyLabels.astype(np.float32)
 
         return tImage, xyxyLabels
+
+
+    def data_preparation(self, image):
+        # Data format is uint8
+        image = image.astype(np.float32)
+        image /= 255.0
+        image = (image - IMAGENET_MEAN_BGR)/IMAGENET_STD_DEV_BGR
+        # To make pixel intensity between [0,1] rather than [-1,1]
+        image = np.clip(image, -1, 1)
+        # image = (image + 1.0)/2.0
+        # print("Image Mean = %.6f, Image Std Dev = %.6f" %(image.mean(), image.std()))
+        # print("Image Min = %.6f, Image Max = %.6f"%(image.min(), image.max()))
+
+        # To make channels first , for pytorch
+        image = np.moveaxis(image, -1, 0)
+        return image
 
     def getData(self, folder_name, file_index):
         images = [None]*self.unrolling_factor
