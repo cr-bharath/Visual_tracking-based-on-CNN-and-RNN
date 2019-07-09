@@ -59,9 +59,18 @@ class CNN(nn.Module):
 
 
 class RNN(nn.Module):
-    def __init__(self,feature_size,num_unroll):
+    def __init__(self,feature_size,num_unroll, batch_size, use_state):
         super(RNN,self).__init__()
         self.unroll = num_unroll
+        self.batch_size = batch_size
+        self.use_state = use_state
+        self.num_layers = 1
+        self.num_directions = 1
+        #TODO: Remove this hardcoding od cuda
+        self.h1 = torch.zeros(self.num_layers*self.num_directions, self.batch_size, LSTM_SIZE).cuda()
+        self.c1 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
+        self.h2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
+        self.c2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
         self.fc1 = nn.Linear(feature_size,1024)
         self.lstm1 = nn.LSTM(1024,LSTM_SIZE,1,batch_first=True)
         self.lstm2 = nn.LSTM(1024+LSTM_SIZE,LSTM_SIZE,1,batch_first=True)
@@ -70,11 +79,22 @@ class RNN(nn.Module):
     def forward(self,features):
         fc1_output = self.fc1(features)
         fc1_output_reshape = fc1_output.reshape(int(fc1_output.size(0)/self.unroll),self.unroll,-1)
-        lstm1_output,state = self.lstm1(fc1_output_reshape)
+        lstm1_output,state1 = self.lstm1(fc1_output_reshape, (self.h1, self.c1))
         # Concatenate lstm1 output and fc layer output
         lstm2_input = torch.cat((fc1_output_reshape,lstm1_output),2)
-        lstm2_output,state = self.lstm2(lstm2_input)
+        lstm2_output,state2 = self.lstm2(lstm2_input, (self.h2, self.c2))
         # Flatten LSTM output
         fc_last_input = lstm2_output.reshape(lstm2_output.size(0),-1)
         fc_output = self.fc_last(fc_last_input)
+        if(self.use_state):
+            self.h1 = state1[0]
+            self.c1 = state1[1]
+            self.h2 = state2[0]
+            self.c2 = state2[1]
+        else:
+            self.h1 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
+            self.c1 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
+            self.h2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
+            self.c2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
+
         return fc_output
