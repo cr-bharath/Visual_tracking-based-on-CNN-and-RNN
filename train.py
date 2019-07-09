@@ -30,7 +30,7 @@ def prepare_for_dataset(path, unrolling_factor):
 def main(FLAGS):
     # Define Models
     CNN_model = ConvNet(FLAGS.batch_size,FLAGS.unroll).to(device)
-    RNN_model = RNN(CNN_OUTPUT_SIZE,FLAGS.unroll).to(device)
+    RNN_model = RNN(CNN_OUTPUT_SIZE,FLAGS.unroll, FLAGS.batch_size, False).to(device) # Stateless LSTM for training
     
    if debug:
         print("Data folder is present in %s" % DATA_PATH)
