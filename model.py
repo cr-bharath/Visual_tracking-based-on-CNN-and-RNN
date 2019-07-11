@@ -71,10 +71,32 @@ class RNN(nn.Module):
         self.c1 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
         self.h2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
         self.c2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
+        # Save initial lstm states for reset during testing
+        self.h1_init = self.h1
+        self.c1_init = self.h1
+        self.c2_init = self.h1
+        self.h2_init = self.h1
         self.fc1 = nn.Linear(feature_size,1024)
         self.lstm1 = nn.LSTM(1024,LSTM_SIZE,1,batch_first=True)
         self.lstm2 = nn.LSTM(1024+LSTM_SIZE,LSTM_SIZE,1,batch_first=True)
         self.fc_last = nn.Linear(LSTM_SIZE*self.unroll,4)
+
+
+    def reset(self):
+        """Function to reset LSTM states while testing"""
+        self.h1 = self.h1_init
+        self.c1 = self.c1_init
+        self.h2 = self.h2_init
+        self.c2 = self.c2_init
+    
+
+    def lstm_state_init(self):
+        """This function is called during testing after first frame is passed""" 
+        self.h1_init = self.h1
+        self.c1_init = self.c1
+        self.c2_init = self.c2
+        self.h2_init = self.h2
+
 
     def forward(self,features):
         fc1_output = self.fc1(features)
@@ -86,15 +108,17 @@ class RNN(nn.Module):
         # Flatten LSTM output
         fc_last_input = lstm2_output.reshape(lstm2_output.size(0),-1)
         fc_output = self.fc_last(fc_last_input)
+
         if(self.use_state):
             self.h1 = state1[0]
             self.c1 = state1[1]
             self.h2 = state2[0]
             self.c2 = state2[1]
-        else:
-            self.h1 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
-            self.c1 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
-            self.h2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
-            self.c2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
+            
+        # else:
+        #     self.h1 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
+        #     self.c1 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
+        #     self.h2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
+        #     self.c2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
 
         return fc_output
