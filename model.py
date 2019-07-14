@@ -3,12 +3,13 @@ import numpy as np
 import torch.nn as nn
 import torch
 import torchvision.models as models
+from constants import LSTM_SIZE
 
 import constants
 
 class CNN(nn.Module):
     def __init__(self,batch_size,unroll):
-        super(ConvNet,self).__init__()
+        super(CNN,self).__init__()
         self.batch_size = batch_size
         self.unroll = unroll
         alexnet = models.alexnet(pretrained=True)
@@ -66,16 +67,15 @@ class RNN(nn.Module):
         self.use_state = use_state
         self.num_layers = 1
         self.num_directions = 1
-        #TODO: Remove this hardcoding od cuda
         self.h1 = torch.zeros(self.num_layers*self.num_directions, self.batch_size, LSTM_SIZE).cuda()
         self.c1 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
         self.h2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
         self.c2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
         # Save initial lstm states for reset during testing
         self.h1_init = self.h1
-        self.c1_init = self.h1
-        self.c2_init = self.h1
-        self.h2_init = self.h1
+        self.c1_init = self.c1
+        self.c2_init = self.h2
+        self.h2_init = self.c2
         self.fc1 = nn.Linear(feature_size,1024)
         self.lstm1 = nn.LSTM(1024,LSTM_SIZE,1,batch_first=True)
         self.lstm2 = nn.LSTM(1024+LSTM_SIZE,LSTM_SIZE,1,batch_first=True)

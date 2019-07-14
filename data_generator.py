@@ -6,7 +6,7 @@ import numpy as np
 import re
 import im_util
 from torch.utils.data.dataset import Dataset
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 
 from constants import CROP_SIZE
 from constants import CROP_PAD
@@ -69,21 +69,21 @@ class TrackerDataset(Dataset):
             else:
                 noisyBox = im_util.fix_bbox_intersection(bboxPrev, bboxOn, images[0].shape[1], images[0].shape[0])
 
-            image_0, output_box0 = im_util.get_cropped_input(
+            image_0, output_box0 = im_util.get_crop_input(
                 images[max(dd - 1, 0)], bboxPrev, CROP_PAD, CROP_SIZE)
 
             tImage[dd, 0, ...] = self.data_preparation(image_0)
 
-            image_1, output_box1 = im_util.get_cropped_input(
+            image_1, output_box1 = im_util.get_crop_input(
                 images[dd], noisyBox, CROP_PAD, CROP_SIZE)
             tImage[dd, 1, ...] = self.data_preparation(image_1)
 
-            if self.debug:
-                plt.subplot(121)
-                plt.imshow(image_0, cmap=plt.get_cmap('gray'))
-                plt.subplot(122)
-                plt.imshow(image_1, cmap=plt.get_cmap('gray'))
-                plt.show()
+            # if self.debug:
+                # plt.subplot(121)
+                # plt.imshow(image_0, cmap=plt.get_cmap('gray'))
+                # plt.subplot(122)
+                # plt.imshow(image_1, cmap=plt.get_cmap('gray'))
+                # plt.show()
             # bboxPrev = bboxOn
 
 

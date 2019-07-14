@@ -108,7 +108,7 @@ def fix_bbox_intersection(bbox, gtBox, imageWidth, imageHeight):
 #   warped.
 # @return{tuple(patch, outputBox)} the output patch and bounding box
 #   representing its coordinates.
-def get_cropped_input(inputImage, bbox, padScale, outputSize):
+def get_crop_input(inputImage, bbox, padScale, outputSize):
     bbox = np.array(bbox)
     width = float(bbox[2] - bbox[0])
     height = float(bbox[3] - bbox[1])
