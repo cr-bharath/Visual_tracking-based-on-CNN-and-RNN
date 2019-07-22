@@ -15,15 +15,15 @@ from constants import IMAGENET_STD_DEV_BGR
 
 class TrackerDataset(Dataset):
     def __init__(self, train_data_path, train_annot_path, list_id, folder_start_pos, dim, unrolls, debug):
-        self.train_data_path = train_data_path
-        self.train_annot_path = train_annot_path
+        self.data_path = train_data_path
+        self.annot_path = train_annot_path
         self.list_id = list_id
         self.folder_start_pos = folder_start_pos
         self.dim = dim
         self.unrolling_factor = unrolls
         self.debug = debug
-        self.folder = [dI for dI in os.listdir(self.train_data_path) if
-                       os.path.isdir(os.path.join(self.train_data_path, dI))]
+        self.folder = [dI for dI in os.listdir(self.data_path) if
+                       os.path.isdir(os.path.join(self.data_path, dI))]
         self.transforms = transforms.ToTensor()
 
     def __len__(self):
@@ -126,10 +126,12 @@ class TrackerDataset(Dataset):
 
     def getData(self, folder_name, file_index):
         images = [None]*self.unrolling_factor
+        # TODO: Remove below
+        print(self.unrolling_factor)
         labels = [None]*self.unrolling_factor
         for dd in range(self.unrolling_factor):
             image_name = "{:06d}".format(file_index + dd)
-            img_path = self.train_data_path + folder_name + "/" + image_name + ".JPEG"
+            img_path = self.data_path + folder_name + "/" + image_name + ".JPEG"
             img = cv2.imread(img_path)
             images[dd] = img
             label = self.get_label(folder_name, image_name)
@@ -139,7 +141,7 @@ class TrackerDataset(Dataset):
 
 
     def get_patch_and_label(self, folder_name, image_name, bbox):
-        img_path = self.train_data_path + folder_name + "/" + image_name + ".JPEG"
+        img_path = self.data_path + folder_name + "/" + image_name + ".JPEG"
         img = cv2.imread(img_path)
         patch, crop_box = im_util.image_crop(img, bbox)
         label = im_util.find_crop_label(bbox, crop_box)
@@ -147,7 +149,7 @@ class TrackerDataset(Dataset):
 
     def get_label(self, folder_name, file_name):
         # base_path = os.getcwd()
-        xml_file = self.train_annot_path+folder_name+"/"+file_name+".xml"
+        xml_file = self.annot_path+folder_name+"/"+file_name+".xml"
         file = open(xml_file)
         contents = file.read()
         a = re.search('<xmax>([\d]+)<\/xmax>',contents)
