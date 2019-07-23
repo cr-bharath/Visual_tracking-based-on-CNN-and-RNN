@@ -2,7 +2,7 @@ from model import CNN,RNN
 import os
 import sys
 from data_generator import data_preparation
-from constants import CROP_PAD,CROP_SIZE,CNN_OUTPUT_SIZE
+from constants import CROP_PAD,CROP_SIZE,CNN_OUTPUT_SIZE,MAX_TRACK_LENGTH
 import torch 
 import im_util
 import numpy as np
@@ -41,26 +41,33 @@ class re3Tracker():
 		image_1,_ = im_util.get_crop_input(image, past_box, CROP_PAD, CROP_SIZE)
 		self.cropped_input[1, ...] = data_preparation(image_1)
 
-		cropped_input_tensor = torch.from_numpy(self.cropped_input)
-		features = self.CNN(cropped_input_tensor.to(self.device))
-		predicted_bbox = self.RNN(features)
+		cropped_input_tensor = torch.from_numpy(np.float32(self.cropped_input))
+		cropped_input_tensor = cropped_input_tensor.view(-1,3,CROP_SIZE,CROP_SIZE)
+		with torch.no_grad():
+			features = self.CNN(cropped_input_tensor.to(self.device))
+			predicted_bbox = self.RNN(features)
+		predicted_bbox_array = predicted_bbox.numpy()
         
         # Save initial LSTM states
 		if self.forward_count == 0:
 			self.RNN.lstm_state_init()
 
-		output_bbox = im_util.from_crop_coordinate_system(predicted_bbox.squeeze() / 10.0, output_box0,1,1)
+		output_bbox = im_util.from_crop_coordinate_system(predicted_bbox_array.squeeze() / 10.0, output_box0,1,1)
 
         # Reset LSTM states to initial state once #MAX_TRACK_LENGTH frames are processed and perform one forward pass
 		if self.forward_count > 0 and self.forward_count % MAX_TRACK_LENGTH == 0:
-			cropped_input = im_util.get_crop_input(image,output_bbox,CROP_PAD,CROP_SIZE)
+			cropped_input,_ = im_util.get_crop_input(image,output_bbox,CROP_PAD,CROP_SIZE)
 			input_image = np.tile(cropped_input[np.newaxis,...],(2,1,1,1))
+			input_tensor = torch.from_numpy(np.float32(input_image))
+			input_tensor = input_tensor.view(-1,3,CROP_SIZE,CROP_SIZE)
 			self.RNN.reset()
-			features = self.CNN(input_image)
+			print(input_tensor.size())
+			features = self.CNN(input_tensor)
 			prediction = self.RNN(features)
 		if starting_box is not None:
 			output_bbox = starting_box
 
+		self.forward_count += 1
 		self.previous_frame = (image, output_bbox)
 		return output_bbox
 
