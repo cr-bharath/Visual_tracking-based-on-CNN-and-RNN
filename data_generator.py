@@ -13,7 +13,7 @@ from constants import CROP_PAD
 from constants import IMAGENET_MEAN_BGR
 from constants import IMAGENET_STD_DEV_BGR
 
-def data_preparation(self, image):
+def data_preparation(image):
         # Data format is uint8
         image = image.astype(np.float32)
         image /= 255.0

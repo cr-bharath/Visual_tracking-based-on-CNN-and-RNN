@@ -67,10 +67,10 @@ class RNN(nn.Module):
         self.use_state = use_state
         self.num_layers = 1
         self.num_directions = 1
-        self.h1 = torch.zeros(self.num_layers*self.num_directions, self.batch_size, LSTM_SIZE).cuda()
-        self.c1 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
-        self.h2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
-        self.c2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
+        self.h1 = torch.zeros(self.num_layers*self.num_directions, self.batch_size, LSTM_SIZE)
+        self.c1 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE)
+        self.h2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE)
+        self.c2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE)
         # Save initial lstm states for reset during testing
         self.h1_init = self.h1
         self.c1_init = self.c1

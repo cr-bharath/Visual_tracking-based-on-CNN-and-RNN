@@ -1,12 +1,13 @@
 import argparse
 import numpy as np
 import os
-import tracker
+from tracker import re3Tracker
 from data_generator import TrackerDataset
 from constants import CROP_SIZE
 from constants import CROP_PAD
 from constants import IMAGENET_MEAN_BGR
 from constants import IMAGENET_STD_DEV_BGR
+import torch
 
 DATA_PATH = "../../"
 
@@ -18,8 +19,7 @@ class Test(TrackerDataset):
         self.annot_path = annot_path
         self.folder = [dI for dI in os.listdir(self.data_path) if
                        os.path.isdir(os.path.join(self.data_path, dI))]
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.tracker_ = re3Tracker(self,device)
+        self.tracker_ = re3Tracker()
     def run_test(self):
         folder_idx = 0
         file_idx = 0
