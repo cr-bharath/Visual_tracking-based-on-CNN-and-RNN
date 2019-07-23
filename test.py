@@ -1,8 +1,7 @@
 import argparse
 import numpy as np
 import os
-import im_util
-
+import tracker
 from data_generator import TrackerDataset
 from constants import CROP_SIZE
 from constants import CROP_PAD
@@ -19,14 +18,12 @@ class Test(TrackerDataset):
         self.annot_path = annot_path
         self.folder = [dI for dI in os.listdir(self.data_path) if
                        os.path.isdir(os.path.join(self.data_path, dI))]
-        self.unrolling_factor = 1
-        self.tracked_data = {}
-
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.tracker_ = re3Tracker(self,device)
     def run_test(self):
         folder_idx = 0
         file_idx = 0
         initial_frame = True
-        tImage = np.zeros((self.unrolling_factor, 2, 3, CROP_SIZE, CROP_SIZE), dtype=np.uint8)
         for item in range(len(self.list_id)):
             if item < self.folder_start_pos[folder_idx]:
                 # Image belongs to same folder
@@ -41,23 +38,14 @@ class Test(TrackerDataset):
                 image, label = self.getData(folder_name, file_index)
 
                 if(initial_frame):
-                    # Make use of label
-                    prevImage = image
-                    bboxPrev = label
+                    bbox = self.tracker.track(image,label)
+                    initial_frame = False
                 else:
-                    prevImage, bboxPrev = self.tracked_data
-
-                image_0, output_box0 = im_util.get_crop_input(
-                    prevImage, bboxPrev, CROP_PAD, CROP_SIZE)
-
-                tImage[0, 0, ...] = self.data_preparation(image_0)
-
-                image_1, output_box1 = im_util.get_crop_input(
-                    image, bboxPrev, CROP_PAD, CROP_SIZE)
-                tImage[0, 1, ...] = self.data_preparation(image_1)
-
-
-
+                    bbox = self.tracker.track(image,None)
+                cv2.rectangle(image,(int(bbox[0]), int(bbox[1])),(int(bbox[2]), int(bbox[3])),
+                	(0,255,0),2)
+                cv2.imshow('Test Image',image)
+                cv2.waitKey(1)
 
             else:
                 # Start using a new folder of images

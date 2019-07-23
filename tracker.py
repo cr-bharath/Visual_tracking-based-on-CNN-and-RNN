@@ -6,7 +6,7 @@ from constants import CROP_PAD,CROP_SIZE
 import torch 
 import cv2
 import im_util
-import bb_util
+import numpy as np
 
 class re3Tracker():
 	def __init__(self,device,checkpoint_name ='./final_checkpoint/re3_final_checkpoint.pth') :
@@ -48,7 +48,7 @@ class re3Tracker():
         if self.forward_count == 0:
         	self.RNN.lstm_state_init()
 
-        output_bbox = bb_util.from_crop_coordinate_system(predicted_bbox.squeeze() / 10.0, output_box0,1,1)
+        output_bbox = im_util.from_crop_coordinate_system(predicted_bbox.squeeze() / 10.0, output_box0,1,1)
 
         # Reset LSTM states to initial state once #MAX_TRACK_LENGTH frames are processed and perform one forward pass
         if self.forward_count > 0 and self.forward_count % MAX_TRACK_LENGTH == 0:
