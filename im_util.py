@@ -249,6 +249,23 @@ def to_crop_coordinate_system(bbox_to_change, crop_location, crop_padding, crop_
     bbox_to_change *= crop_size / crop_location_xywh[[2,3,2,3]]
     return bbox_to_change
 
+
+
+# Inverts the transformation from to_crop_coordinate_system
+# @crop_size the maximum size of the coordinate frame of bbox_to_change.
+def from_crop_coordinate_system(bbox_to_change, crop_location, crop_padding, crop_size):
+    if isinstance(bbox_to_change, list):
+        bbox_to_change = np.array(bbox_to_change)
+    if isinstance(crop_location, list):
+        crop_location = np.array(crop_location)
+    bbox_to_change = bbox_to_change.astype(np.float32)
+    crop_location = crop_location.astype(np.float32)
+
+    crop_location = scale_bbox(crop_location, crop_padding)
+    crop_location_xywh = xyxy_to_xywh(crop_location)
+    bbox_to_change *= crop_location_xywh[[2,3,2,3]] / crop_size
+    bbox_to_change += crop_location[[0,1,0,1]]
+    return bbox_to_change
 # if __name__ == '__main__':
 #
 #     path = 'C:/Users/Janani/Desktop/Computer Vision/Project/final/data3/ILSVRC2015/Data/train/ILSVRC2015_train_00033007/'
