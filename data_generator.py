@@ -41,8 +41,8 @@ class TrackerDataset(Dataset):
         #                                                                        # appear first
         # temp = x.shape
         # y = np.empty((Unrolling_factor, 1, 4))
-        tImage = np.zeros((self.unrolling_factor, 2, 3, CROP_SIZE, CROP_SIZE), dtype=np.uint8)
-        xywhLabels = np.zeros((self.unrolling_factor, 4), dtype=np.uint8)
+        tImage = np.zeros((self.unrolling_factor, 2, 3, CROP_SIZE, CROP_SIZE), dtype=np.float32)
+        xywhLabels = np.zeros((self.unrolling_factor, 4), dtype=np.float32)
 
         for i in range(len(self.folder_start_pos)):
             if item < (self.folder_start_pos[i]):
@@ -105,7 +105,8 @@ class TrackerDataset(Dataset):
         tImage = tImage.reshape([self.unrolling_factor* 2] + list(tImage.shape[2:]))
         xyxyLabels = im_util.xywh_to_xyxy(xywhLabels.T).T * 10
         xyxyLabels = xyxyLabels.astype(np.float32)
-
+        # TODO: Done Now
+        #xyxyLabels = np.array([0.25, 0.25, 0.5, 0.5], dtype = float)
         return tImage, xyxyLabels
 
 
@@ -115,7 +116,7 @@ class TrackerDataset(Dataset):
         image /= 255.0
         image = (image - IMAGENET_MEAN_BGR)/IMAGENET_STD_DEV_BGR
         # To make pixel intensity between [0,1] rather than [-1,1]
-        image = np.clip(image, -1, 1)
+        #image = np.clip(image, -1, 1)
         # image = (image + 1.0)/2.0
         # print("Image Mean = %.6f, Image Std Dev = %.6f" %(image.mean(), image.std()))
         # print("Image Min = %.6f, Image Max = %.6f"%(image.min(), image.max()))
@@ -131,7 +132,8 @@ class TrackerDataset(Dataset):
             image_name = "{:06d}".format(file_index + dd)
             img_path = self.train_data_path + folder_name + "/" + image_name + ".JPEG"
             img = cv2.imread(img_path)
-            images[dd] = img
+            # Changing from BGR to RGB
+            images[dd] = img[:,:,::-1]
             label = self.get_label(folder_name, image_name)
             labels[dd] = label
         return images, labels

@@ -64,22 +64,26 @@ class RNN(nn.Module):
         super(RNN,self).__init__()
         self.unroll = num_unroll
         self.batch_size = batch_size
+        # Flag to use stateless(while training) or stateful (while testing) LSTM
         self.use_state = use_state
+
         self.num_layers = 1
         self.num_directions = 1
         self.h1 = torch.zeros(self.num_layers*self.num_directions, self.batch_size, LSTM_SIZE).cuda()
         self.c1 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
         self.h2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
         self.c2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
+        
         # Save initial lstm states for reset during testing
         self.h1_init = self.h1
         self.c1_init = self.c1
         self.c2_init = self.h2
         self.h2_init = self.c2
+
         self.fc1 = nn.Linear(feature_size,1024)
         self.lstm1 = nn.LSTM(1024,LSTM_SIZE,1,batch_first=True)
         self.lstm2 = nn.LSTM(1024+LSTM_SIZE,LSTM_SIZE,1,batch_first=True)
-        self.fc_last = nn.Linear(LSTM_SIZE*self.unroll,4)
+        self.fc_last = nn.Linear(LSTM_SIZE,4)
 
 
     def reset(self):
@@ -106,7 +110,7 @@ class RNN(nn.Module):
         lstm2_input = torch.cat((fc1_output_reshape,lstm1_output),2)
         lstm2_output,state2 = self.lstm2(lstm2_input, (self.h2, self.c2))
         # Flatten LSTM output
-        fc_last_input = lstm2_output.reshape(lstm2_output.size(0),-1)
+        fc_last_input = lstm2_output.reshape(lstm2_output.size(0)*lstm2_output.size(1),-1)
         fc_output = self.fc_last(fc_last_input)
 
         if(self.use_state):
