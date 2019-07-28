@@ -6,7 +6,7 @@ import torchvision.models as models
 from constants import LSTM_SIZE
 
 import constants
-
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 class CNN(nn.Module):
     def __init__(self,batch_size,unroll):
         super(CNN,self).__init__()
@@ -67,10 +67,10 @@ class RNN(nn.Module):
         self.use_state = use_state
         self.num_layers = 1
         self.num_directions = 1
-        self.h1 = torch.zeros(self.num_layers*self.num_directions, self.batch_size, LSTM_SIZE)
-        self.c1 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE)
-        self.h2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE)
-        self.c2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE)
+        self.h1 = torch.zeros(self.num_layers*self.num_directions, self.batch_size, LSTM_SIZE).to(device)
+        self.c1 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).to(device)
+        self.h2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).to(device)
+        self.c2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).to(device)
         # Save initial lstm states for reset during testing
         self.h1_init = self.h1
         self.c1_init = self.c1

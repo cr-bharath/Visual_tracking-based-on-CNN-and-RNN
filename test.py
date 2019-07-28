@@ -1,8 +1,6 @@
 import argparse
 import numpy as np
 import os
-import cv2
-
 from tracker import re3Tracker
 from data_generator import TrackerDataset
 from constants import CROP_SIZE
@@ -10,8 +8,9 @@ from constants import CROP_PAD
 from constants import IMAGENET_MEAN_BGR
 from constants import IMAGENET_STD_DEV_BGR
 import torch
-
-DATA_PATH = "../../"
+import im_util
+import cv2
+DATA_PATH = "C:\\Users\\gjanaga\\Desktop\\CV"
 
 class Test(TrackerDataset):
     def __init__(self, data_path, annot_path, list_id, folder_start_pos):
@@ -26,7 +25,10 @@ class Test(TrackerDataset):
     def run_test(self):
         folder_idx = 0
         file_idx = 0
-        initial_frame = True
+        folder_name = self.folder[folder_idx]
+        initial_frame = False
+        image, label = self.getData(folder_name, file_idx)
+        bbox = self.tracker.track(image[0],starting_box=label[0])
         for item in range(len(self.list_id)):
             if item < self.folder_start_pos[folder_idx]:
                 # Image belongs to same folder
@@ -41,15 +43,24 @@ class Test(TrackerDataset):
                 image, label = self.getData(folder_name, file_index)
                 image = image[0]
                 label = label[0]
+
+                # Getting normalized gt labels in crop coordinate system
+                shiftedBBox = im_util.to_crop_coordinate_system(label, label, CROP_PAD, 1)
+                shiftedBBoxXYWH = im_util.xyxy_to_xywh(shiftedBBox)
+                xywhLabels = shiftedBBoxXYWH
+                xyxyLabels = im_util.xywh_to_xyxy(xywhLabels.T).T * 10
+                xyxyLabels = xyxyLabels.astype(np.float32)
+        
                 if(initial_frame):
-                    bbox = self.tracker.track(image, label)
+                    print(label)
+                    bbox = self.tracker.track(image,starting_box=label)
                     initial_frame = False
                 else:
-                    bbox = self.tracker.track(image,None)
-                cv2.rectangle(image,(int(bbox[0]), int(bbox[1])),(int(bbox[2]), int(bbox[3])), (0,255,0),2)
+                    bbox = self.tracker.track(image,gt_labels=xyxyLabels)
+                cv2.rectangle(image,(int(bbox[0]), int(bbox[1])),(int(bbox[2]), int(bbox[3])),
+                	(0,255,0),2)
                 cv2.imshow('Test Image',image)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
+                cv2.waitKey(1)
 
             else:
                 # Start using a new folder of images
@@ -77,9 +88,9 @@ def main(FLAGS):
     data_path = FLAGS.data_path
     unrolling_factor = 1 # For testing
     # val_data_path = "C:/Users/Janani/Desktop/Computer Vision/Project/final/data/val/Data/"
-    DATA_PATH = os.getcwd()
-    val_data_path = "../.." + "/data/val/Data/"
-    val_annot_path = "../.." + "/data/val/Annotations/"
+    #DATA_PATH = os.getcwd()
+    val_data_path = DATA_PATH + "/data/val/Data/"
+    val_annot_path = DATA_PATH + "/data/val/Annotations/"
     print("Val path %s"%val_data_path)
     list_id, folder_start_pos = prepare_for_dataset(val_data_path, unrolling_factor)
     obj = Test(val_data_path, val_annot_path, list_id, folder_start_pos)

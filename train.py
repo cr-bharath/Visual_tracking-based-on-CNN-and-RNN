@@ -104,9 +104,9 @@ def main(FLAGS):
             break
 
             # Print log info
-            # if minibatch % 50 == 0:
+            if minibatch % 50 == 0:
                 # TODO: Revert change
-                # print('Epoch [{}/{}], Step [{},{}], Loss {:4f}'.format(epoch,FLAGS.num_epochs,minibatch,total_step,loss.item()))
+                print('Epoch [{}/{}], Step [{},{}], Loss {:4f}'.format(epoch,FLAGS.num_epochs,minibatch,total_step,loss.item()))
 
         if (epoch+1) % 10 == 0:
             # Save the model checkpoint
