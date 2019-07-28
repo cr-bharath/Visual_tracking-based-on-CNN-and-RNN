@@ -1,6 +1,8 @@
 import argparse
 import numpy as np
 import os
+import cv2
+
 from tracker import re3Tracker
 from data_generator import TrackerDataset
 from constants import CROP_SIZE
@@ -19,7 +21,8 @@ class Test(TrackerDataset):
         self.annot_path = annot_path
         self.folder = [dI for dI in os.listdir(self.data_path) if
                        os.path.isdir(os.path.join(self.data_path, dI))]
-        self.tracker_ = re3Tracker()
+        self.unrolling_factor = 1
+        self.tracker = re3Tracker()
     def run_test(self):
         folder_idx = 0
         file_idx = 0
@@ -36,23 +39,24 @@ class Test(TrackerDataset):
                     file_index = item - self.folder_start_pos[folder_idx - 1]
 
                 image, label = self.getData(folder_name, file_index)
-
+                image = image[0]
+                label = label[0]
                 if(initial_frame):
-                    bbox = self.tracker.track(image,label)
+                    bbox = self.tracker.track(image, label)
                     initial_frame = False
                 else:
                     bbox = self.tracker.track(image,None)
-                cv2.rectangle(image,(int(bbox[0]), int(bbox[1])),(int(bbox[2]), int(bbox[3])),
-                	(0,255,0),2)
+                cv2.rectangle(image,(int(bbox[0]), int(bbox[1])),(int(bbox[2]), int(bbox[3])), (0,255,0),2)
                 cv2.imshow('Test Image',image)
-                cv2.waitKey(1)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
 
             else:
                 # Start using a new folder of images
                 folder_idx += 1
                 item -= 1 # Repeat with same iterator
             # TODO: Remove
-            break
+
 
 def prepare_for_dataset(path, unrolling_factor):
     folder_start_pos = []

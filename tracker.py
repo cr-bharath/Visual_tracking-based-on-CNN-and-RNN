@@ -30,7 +30,7 @@ class re3Tracker():
 	def track(self,image,starting_box):
 		if starting_box is not None:
 			prev_image = image
-			past_box = starting_box
+ 			past_box = starting_box
 			self.forward_count = 0
 		else:
 			prev_image, past_box = self.previous_frame
@@ -47,14 +47,14 @@ class re3Tracker():
 			features = self.CNN(cropped_input_tensor.to(self.device))
 			predicted_bbox = self.RNN(features)
 		predicted_bbox_array = predicted_bbox.numpy()
-        
-        # Save initial LSTM states
+
+		# Save initial LSTM states
 		if self.forward_count == 0:
 			self.RNN.lstm_state_init()
 
 		output_bbox = im_util.from_crop_coordinate_system(predicted_bbox_array.squeeze() / 10.0, output_box0,1,1)
 
-        # Reset LSTM states to initial state once #MAX_TRACK_LENGTH frames are processed and perform one forward pass
+		# Reset LSTM states to initial state once #MAX_TRACK_LENGTH frames are processed and perform one forward pass
 		if self.forward_count > 0 and self.forward_count % MAX_TRACK_LENGTH == 0:
 			cropped_input,_ = im_util.get_crop_input(image,output_bbox,CROP_PAD,CROP_SIZE)
 			input_image = np.tile(cropped_input[np.newaxis,...],(2,1,1,1))
