@@ -41,6 +41,8 @@ class re3Tracker():
 			prev_image, past_box = self.previous_frame
 
 		image_0, output_box0 = im_util.get_crop_input(prev_image, past_box, CROP_PAD, CROP_SIZE)
+		print('output_box0')
+		print(output_box0)
 		self.cropped_input[0, ...] = data_preparation(image_0)
 
 		image_1,_ = im_util.get_crop_input(image, past_box, CROP_PAD, CROP_SIZE)
@@ -51,7 +53,6 @@ class re3Tracker():
 		with torch.no_grad():
 			features = self.CNN(cropped_input_tensor.to(self.device))
 			predicted_bbox = self.RNN(features)
-
 		# Loss Calculation
 		if starting_box is None and self.calculate_loss == True:
                         gt_labels = torch.from_numpy(gt_labels).float()
@@ -64,6 +65,10 @@ class re3Tracker():
 		#print(predicted_bbox_array.squeeze())
                 
                 # Save initial LSTM states
+		predicted_bbox_array = predicted_bbox.numpy()
+		print(predicted_bbox_array.squeeze())
+        
+        # Save initial LSTM states
 		if self.forward_count == 0:
 			self.RNN.lstm_state_init()
 
