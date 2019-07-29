@@ -14,7 +14,8 @@ import argparse
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 #Update your Datapath here
 DATA_PATH = "../"
-
+#LOG file
+flog = open("LOG.txt","a+")
 def prepare_for_dataset(path, unrolling_factor):
     folder_start_pos = []
     total_images = 0
@@ -56,7 +57,7 @@ def main(FLAGS):
     # Load Checkpoint if present
     epoch = 0
     # TODO: Manually copy the checkpoint to this path and has to be renamed as below
-    checkpoint_name = data_path + '/final_checkpoint/re3_final_checkpoint.pth'
+    checkpoint_name = './final_checkpoint/re3_final_checkpoint.pth'
     if debug:
         print("Checkpoint name is %s" % checkpoint_name)
     if os.path.isfile(checkpoint_name):
@@ -109,10 +110,11 @@ def main(FLAGS):
                 if minibatch % 20 == 0:
                     # TODO: Revert change
                     print('Epoch [{}/{}], Step [{},{}], Loss {:4f}'.format(epoch,FLAGS.num_epochs,minibatch,total_step,loss.item()))
+                    flog.write('Epoch [{}/{}], Step [{},{}], Loss {:4f}\n'.format(epoch,FLAGS.num_epochs,minibatch,total_step,loss.item()))
             except:
                 print(images.size())
-        if (epoch) % 5 == 0:
-        #if (epoch+1) % 10 == 0:
+        #if (epoch) % 5 == 0:
+        if (epoch) % 10 == 0:
             # Save the model checkpoint
             torch.save({
                         'epoch': epoch,
