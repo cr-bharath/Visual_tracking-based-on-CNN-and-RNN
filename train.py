@@ -66,7 +66,7 @@ def main(FLAGS):
         RNN_model.load_state_dict(checkpoint['rnn_model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         epoch = checkpoint['epoch']
-
+        print("Checkpoint loaded")
     if debug:
         print("Data folder is present in %s" % data_path)
     # Training data path
