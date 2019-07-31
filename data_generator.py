@@ -16,10 +16,11 @@ from constants import IMAGENET_STD_DEV_BGR
 def data_preparation(image):
         # Data format is uint8
         image = image.astype(np.float32)
-        image /= 255.0
+        if image.max() > 1.0:
+            image /= 255.0
         image = (image - IMAGENET_MEAN_BGR)/IMAGENET_STD_DEV_BGR
         # To make pixel intensity between [0,1] rather than [-1,1]
-        image = np.clip(image, -1, 1)
+        #image = np.clip(image, -1, 1)
         # image = (image + 1.0)/2.0
         # print("Image Mean = %.6f, Image Std Dev = %.6f" %(image.mean(), image.std()))
         # print("Image Min = %.6f, Image Max = %.6f"%(image.min(), image.max()))
