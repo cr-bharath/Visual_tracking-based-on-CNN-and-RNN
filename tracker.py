@@ -27,7 +27,7 @@ class re3Tracker():
 		self.RNN = self.RNN.to(device)
 		self.forward_count = -1
 		self.previous_frame = None
-		self.cropped_input = np.zeros((2, 3, CROP_SIZE, CROP_SIZE), dtype=np.uint8)
+		self.cropped_input = np.zeros((2, 3, CROP_SIZE, CROP_SIZE), dtype=np.float32)
 		self.calculate_loss = loss_flag
 		self.criterion = nn.MSELoss()
 		self.MSE_loss = 0
@@ -41,6 +41,8 @@ class re3Tracker():
 			prev_image, past_box = self.previous_frame
 
 		image_0, output_box0 = im_util.get_crop_input(prev_image, past_box, CROP_PAD, CROP_SIZE)
+		# print('output_box0')
+		# print(output_box0)
 		self.cropped_input[0, ...] = data_preparation(image_0)
 
 		image_1,_ = im_util.get_crop_input(image, past_box, CROP_PAD, CROP_SIZE)
@@ -64,7 +66,7 @@ class re3Tracker():
                 
                 # Save initial LSTM states
 		predicted_bbox_array = predicted_bbox.numpy()
-		print(predicted_bbox_array.squeeze())
+		# print(predicted_bbox_array.squeeze())
         
         # Save initial LSTM states
 		if self.forward_count == 0:

@@ -125,9 +125,8 @@ class TrackerDataset(Dataset):
         return tImage, xyxyLabels
 
     def getData(self, folder_name, file_index):
+        print(folder_name, file_index)
         images = [None]*self.unrolling_factor
-        # TODO: Remove below
-        #print(self.unrolling_factor)
         labels = [None]*self.unrolling_factor
         for dd in range(self.unrolling_factor):
             image_name = "{:06d}".format(file_index + dd)

@@ -10,8 +10,12 @@ from constants import IMAGENET_STD_DEV_BGR
 import torch
 import im_util
 import cv2
-DATA_PATH = "C:\\Users\\gjanaga\\Desktop\\CV"
+DATA_PATH = "../../"
+import fnmatch
+import re
 
+specific_folder = 'ILSVRC2015_train_00033011'
+# specific_folder = None
 class Test(TrackerDataset):
     def __init__(self, data_path, annot_path, list_id, folder_start_pos):
         self.list_id = list_id
@@ -25,7 +29,10 @@ class Test(TrackerDataset):
     def run_test(self):
         folder_idx = 0
         file_idx = 0
-        folder_name = self.folder[folder_idx]
+        if specific_folder is not None:
+            folder_name = specific_folder
+        else:
+            folder_name = self.folder[folder_idx]
         initial_frame = False
         image, label = self.getData(folder_name, file_idx)
         bbox = self.tracker.track(image[0],starting_box=label[0])
@@ -33,7 +40,9 @@ class Test(TrackerDataset):
             if item < self.folder_start_pos[folder_idx]:
                 # Image belongs to same folder
 
-                folder_name = self.folder[folder_idx]
+                if specific_folder is None:
+                    # Validate across all folders in val path
+                    folder_name = self.folder[folder_idx]
 
                 if folder_idx == 0:
                     file_index = item
@@ -41,8 +50,12 @@ class Test(TrackerDataset):
                     file_index = item - self.folder_start_pos[folder_idx - 1]
 
                 image, label = self.getData(folder_name, file_index)
+                # Since Unrolling = 1
                 image = image[0]
                 label = label[0]
+                if image is None or label is None:
+                    # Skip when image or label is bad
+                    continue
 
                 # Getting normalized gt labels in crop coordinate system
                 shiftedBBox = im_util.to_crop_coordinate_system(label, label, CROP_PAD, 1)
@@ -66,15 +79,20 @@ class Test(TrackerDataset):
                 # Start using a new folder of images
                 folder_idx += 1
                 item -= 1 # Repeat with same iterator
-            # TODO: Remove
-
-
+includes = ['']
+if specific_folder is not None:
+    includes = [specific_folder]
+    includes = r'|'.join([fnmatch.translate(x) for x in includes]) or r'$.'
+else:
+    # Match everything
+    includes = r'.*'
 def prepare_for_dataset(path, unrolling_factor):
     folder_start_pos = []
     total_images = 0
     # Recursively iterate through imagenet data folders to assign IDs for the eligible images of the  video sequence.
     # Last few images are decided as eligible or not eligible by Unrolling factor
     for _, dirnames, filenames in os.walk(path):
+        dirnames[:] = [d for d in dirnames if re.match(includes, d)]
         if len(filenames) != 0:
             n_files = len(filenames) # Total number of images present in the video
             # Not all are eligible for list_ids
