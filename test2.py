@@ -21,14 +21,12 @@ def main():
     # ILSVRC2015_train_00321002
     initial_bbox = [192, 176, 269, 215]
     image = cv2.imread(image_paths[0])
-    imageRGB = image[:,:,::-1]
-    bbox = tracker.track(imageRGB,initial_bbox)
+
+    bbox = tracker.track(image,initial_bbox)
     print(bbox)
     for ii,image_path in enumerate(image_paths):
         image = cv2.imread(image_path)
-        imageRGB = image[:, :, ::-1]
-        bbox = tracker.track(imageRGB)
-        #print(bbox)
+        bbox = tracker.track(image)
         cv2.rectangle(image,
                 (int(bbox[0]), int(bbox[1])),
                 (int(bbox[2]), int(bbox[3])),

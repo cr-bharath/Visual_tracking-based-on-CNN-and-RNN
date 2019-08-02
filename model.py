@@ -119,11 +119,4 @@ class RNN(nn.Module):
             self.c1 = state1[1]
             self.h2 = state2[0]
             self.c2 = state2[1]
-            
-        # else:
-        #     self.h1 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
-        #     self.c1 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
-        #     self.h2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
-        #     self.c2 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, LSTM_SIZE).cuda()
-
         return fc_output

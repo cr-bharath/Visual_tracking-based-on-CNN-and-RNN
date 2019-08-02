@@ -19,11 +19,8 @@ def data_preparation(image):
         if image.max() > 1.0:
             image /= 255.0
         image = (image - IMAGENET_MEAN_BGR)/IMAGENET_STD_DEV_BGR
-        # To make pixel intensity between [0,1] rather than [-1,1]
-        #image = np.clip(image, -1, 1)
-        # image = (image + 1.0)/2.0
-        # print("Image Mean = %.6f, Image Std Dev = %.6f" %(image.mean(), image.std()))
-        # print("Image Min = %.6f, Image Max = %.6f"%(image.min(), image.max()))
+        # Changing order from BGR to RGB ( pretrained CNN model expects in RGB order)
+        image = image[:,:,::-1]
 
         # To make channels first , for pytorch
         image = np.moveaxis(image, -1, 0)
@@ -74,7 +71,6 @@ class TrackerDataset(Dataset):
         # Beginning of one sequence . Sequence length = Unrolling factor
         folder_name = self.folder[folder_index]
         images, labels = self.getData(folder_name, file_index)
-        height = images[1].shape[0]
         initbox = labels[0]
         bboxPrev = initbox
 
@@ -126,15 +122,13 @@ class TrackerDataset(Dataset):
         return tImage, xyxyLabels
 
     def getData(self, folder_name, file_index):
-        print(folder_name, file_index)
         images = [None]*self.unrolling_factor
         labels = [None]*self.unrolling_factor
         for dd in range(self.unrolling_factor):
             image_name = "{:06d}".format(file_index + dd)
             img_path = self.data_path + folder_name + "/" + image_name + ".JPEG"
             img = cv2.imread(img_path)
-            # Changing from BGR to RGB
-            images[dd] = img[:,:,::-1]
+            images[dd] = img
             label = self.get_label(folder_name, image_name)
             labels[dd] = label
         return images, labels
