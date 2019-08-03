@@ -52,7 +52,7 @@ def main(FLAGS):
     params = list(RNN_model.parameters()) + prelu_params + skip_conv_params
 
     # Initialize optimizer , added weight decay
-    optimizer = torch.optim.Adam(params, lr=FLAGS.learning_rate,weight_decay=0.0005)
+    optimizer = torch.optim.Adam(params, lr=FLAGS.learning_rate)
 
     # Load Checkpoint if present
     epoch = 0
@@ -82,6 +82,8 @@ def main(FLAGS):
     count = 0
 
     total_step = len(train_loader)
+    # Loss accumulator
+    loss_sum = 0.0
     #Start training
     ckpt_path = 'trained_checkpoints'
     # TODO: The checkpoints are saved in one folder and loaded from another folder.
@@ -89,11 +91,11 @@ def main(FLAGS):
     for epoch in range(epoch, FLAGS.num_epochs):
         for minibatch ,(images,gt_labels) in enumerate(train_loader):
             try:
-                images = images.view(-1, 3, CROP_SIZE, CROP_SIZE).float()
-                images = images.to(device)
-                gt_labels = gt_labels.view(-1,4).float()
-                gt_labels = gt_labels.to(device)
-            #Forward, backward and optimize
+                # Converting (batch_size x 2*unroll x C x H x W ) to (batch_size*unroll*2 x C x H x W )
+                images = images.view(-1, 3, CROP_SIZE, CROP_SIZE).to(device)
+                gt_labels = gt_labels.view(-1,4).to(device)
+                
+                #Forward, backward and optimize
                 CNN_features = CNN_model(images)
                 pred_labels = RNN_model(CNN_features)
                 loss = criterion(pred_labels,gt_labels)
@@ -102,23 +104,16 @@ def main(FLAGS):
                 loss.backward()
                 optimizer.step()
 
-            # TODO: Remove the below lines. Written to check if one minibatch is proper
-            #print("Done one mini batch")
-            #break
-
-            # Print log info
-            if minibatch % 50 == 0:
-                # TODO: Revert change
-                print('Epoch [{}/{}], Step [{},{}], Loss {:4f}'.format(epoch,FLAGS.num_epochs,minibatch,total_step,loss.item()))
-
-        if (epoch+1) % 10 == 0:
-                if minibatch % 20 == 0:
-                    # TODO: Revert change
-                    print('Epoch [{}/{}], Step [{},{}], Loss {:4f}'.format(epoch,FLAGS.num_epochs,minibatch,total_step,loss.item()))
-                    flog.write('Epoch [{}/{}], Step [{},{}], Loss {:4f}\n'.format(epoch,FLAGS.num_epochs,minibatch,total_step,loss.item()))
-            except:
+                loss_sum  += loss.item()
+                if minibatch % 20==0:
+                    print('Epoch [{}/{}],Step [{}/{}], Loss {:4f}\n'.format(epoch,FLAGS.num_epochs,minibatch,total_step,loss.item()))
+            except Exception as e:
+                print(e)
                 print(images.size())
-        #if (epoch) % 5 == 0:
+        average_loss = loss_sum / total_step
+        loss_sum = 0.0
+        flog.write('Epoch [{}/{}],Avg Loss {:4f}\n'.format(epoch,FLAGS.num_epochs,average_loss))
+        print('Epoch [{}/{}],Avg Loss {:4f}\n'.format(epoch,FLAGS.num_epochs,average_loss))
         if (epoch) % 10 == 0:
             # Save the model checkpoint
             torch.save({
