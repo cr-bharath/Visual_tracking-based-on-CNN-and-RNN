@@ -1,0 +1,26 @@
+Getting Started with GCP
+____________________________________
+
+1) Follow this video tutorial to understand how to create an instance and SSH into it.
+https://www.youtube.com/watch?v=azh8J0acu6A
+
+2) When creating an instance, to add GPU, first check your GPU quota. If you don`t have required quota size, submit a request 
+to customer support of GCP team. Follow this stackoverflow link
+https://serverfault.com/questions/887256/youve-reached-your-limit-of-0-gpus-nvidia-k80-when-start-an-instance-with-gpu-o
+
+3) Install CUDA Toolkit 9.0 in NVIDIA K80 by following the link
+https://mc.ai/deep-learning-with-google-cloud-platform-part2-how-to-install-cuda-on-your-compute-engine/
+
+4) Pytorch version for CUDA toolkit:
+Torch - 1.1.0 and Torch vision - 0.3.0
+Compatabile Torch can be installed with this command
+pip3 install torch==1.1.0+cu90 torchvision==0.3.0+cu90 -f https://download.pytorch.org/whl/cu90/torch_stable.html
+
+5) Create virtual environment in GCP instance
+https://gist.github.com/frfahim/73c0fad6350332cef7a653bcd762f08d
+
+6) Files can be uploaded directly in GUI of bucket. Mount the bucket into your instance. Steps are explained by the following tutorial
+https://www.youtube.com/watch?v=mE6dLYOf8BA
+Use --implicit-dirs when you are not successful in mounting the bucket. Mounting the bucket is equivalent to physically attaching a pendrive
+to your desktop.
+
