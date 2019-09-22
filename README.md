@@ -15,7 +15,9 @@ Since Pytorch is easy for debugging and maintenance, this framework was chosen.
 4. Numpy 1.16 or greater
 
 ### Result:
-Model\`s behaviour of tracking animals can be seen below. However, the model could not track a hand thus failing to generalize. Our training videos consist of animals like horse, panda,
+Model\`s behaviour of tracking animals can be seen below. 
+![](dog.gif)
+However, the model could not track a hand thus failing to generalize. Our training videos consist of animals like horse, panda,
 etc.., as object of interest. It could be the reason behind model\`s behaviour on animal videos. Also, the CNN model was frozen during training.
 
 ### Future Scope:
